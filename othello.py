@@ -1,6 +1,6 @@
 import sys; args = sys.argv[1:]
 # args = ['44']
-args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
+# args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
 #Othello
 #Nihal Shah
 
@@ -57,7 +57,7 @@ def makemove(board, move, tokentoplay):
                 oppositecount += 1
                 break
             m += 1
-        if not top and oppositecount<2 and ind-m>=0 and m>1:
+        if not top and oppositecount==1 and ind-m>=0 and m>1:
             it = ind-1
             while it!=ind-m:
                 board = board[:s[it]]+tokentoplay+board[s[it]+1:]
@@ -75,6 +75,7 @@ def findmoves(board, tokentofindmovesplay):
     moves = set()
     tokens = {*"XOox"}
     for i in range(len(board)):
+    
         if board[i].upper() == tokentofindmovesplay.upper():
             for s in d[i]:
                 ind = s.index(i)
@@ -99,7 +100,35 @@ def findmoves(board, tokentofindmovesplay):
                 elif oppositecount==1 and not top and ind+k<len(s):
                     moves.add(s[ind+k])
     return sorted(list(moves))
+    
+    # constraints, d = findsets()
+    # moves = set()
+    # tokens = {*"XOox"}
+    # for i in range(len(board)):
+    #     if board[i].lower() == tokentofindmovesplay.lower():
+    #         for s in d[i]:
+    #             ind = s.index(i)
+    #             k = 0
+    #             top = False
+    #             oppositecount = 0
+    #             while ind+k< len(s) and board[s[ind+k]] in tokens:
 
+    #                 if board[s[ind+k]] != tokentofindmovesplay:
+    #                     oppositecount += 1
+    #                     top = True
+    #                     break
+    #                 k += 1
+    #             m = 0
+    #             while ind-m>=0 and board[s[ind-m]] in tokens:
+    #                 if board[s[ind-m]] != tokentofindmovesplay:
+    #                     oppositecount += 1
+    #                     break
+    #                 m += 1
+    #             if top and oppositecount<2 and ind-m>=0:
+    #                 moves.add(s[ind-m])
+    #             elif oppositecount==1 and not top and ind+k<len(s):
+    #                 moves.add(s[ind+k])
+    # return sorted(list(moves))            
 
 
 def parseargs(args):    
@@ -140,10 +169,10 @@ def parseargs(args):
                 possiblemoves = findmoves(board, "X")
         else:
             tokentoplay = 'O'
-            possiblemoves = findmoves(board, tokentoplay)
+            possiblemoves = findmoves(board, "X")
             if not possiblemoves:
                 tokentoplay = 'X'
-                possiblemoves = findmoves(board, tokentoplay)
+                possiblemoves = findmoves(board, "O")
     if not possiblemoves:
         if tokentoplay.upper() == 'X':
             possiblemoves = findmoves(board, 'O')
