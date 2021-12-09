@@ -1,6 +1,8 @@
 import sys; args = sys.argv[1:]
 # args = ['44']
 # args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
+# args = "xxxxxx..xxxoo.o.xxoxooo.xxooooo.xxoooooxx.o.ooox.oo.ooox..o.xxx. x 51".split(" ")
+# args = ".x........x.ox.o...ox.o.x.oxox...oxxo.x.ooxooooo.x.x.o..x.ox.o.. o 4".split(" ")
 #Othello
 #Nihal Shah
 
@@ -44,19 +46,24 @@ def makemove(board, move, tokentoplay):
         k = 0
         top = False
         oppositecount = 0
-        
+        visitedcount = 0
         while ind+k< len(s) and (board[s[ind+k]] in tokens or k==0):
             if board[s[ind+k]] == tokentoplay:
-                oppositecount += 1
-                top = True
+                if visitedcount>1:
+                    oppositecount += 1
+                    top = True
                 break
             k += 1
+            visitedcount += 1
         m = 0
+        visitedcount = 0
         while ind-m>=0 and (board[s[ind-m]] in tokens or m == 0):
             if board[s[ind-m]] ==tokentoplay:
-                oppositecount += 1
+                if visitedcount>1:
+                    oppositecount += 1
                 break
             m += 1
+            visitedcount += 1
         if not top and oppositecount==1 and ind-m>=0 and m>1:
             it = ind-1
             while it!=ind-m:
@@ -100,36 +107,6 @@ def findmoves(board, tokentofindmovesplay):
                 elif oppositecount==1 and not top and ind+k<len(s):
                     moves.add(s[ind+k])
     return sorted(list(moves))
-    
-    # constraints, d = findsets()
-    # moves = set()
-    # tokens = {*"XOox"}
-    # for i in range(len(board)):
-    #     if board[i].lower() == tokentofindmovesplay.lower():
-    #         for s in d[i]:
-    #             ind = s.index(i)
-    #             k = 0
-    #             top = False
-    #             oppositecount = 0
-    #             while ind+k< len(s) and board[s[ind+k]] in tokens:
-
-    #                 if board[s[ind+k]] != tokentofindmovesplay:
-    #                     oppositecount += 1
-    #                     top = True
-    #                     break
-    #                 k += 1
-    #             m = 0
-    #             while ind-m>=0 and board[s[ind-m]] in tokens:
-    #                 if board[s[ind-m]] != tokentofindmovesplay:
-    #                     oppositecount += 1
-    #                     break
-    #                 m += 1
-    #             if top and oppositecount<2 and ind-m>=0:
-    #                 moves.add(s[ind-m])
-    #             elif oppositecount==1 and not top and ind+k<len(s):
-    #                 moves.add(s[ind+k])
-    # return sorted(list(moves))            
-
 
 def parseargs(args):    
     newargs = args
