@@ -3,7 +3,8 @@ import sys; args = sys.argv[1:]
 # args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
 # args = "xxxxxx..xxxoo.o.xxoxooo.xxooooo.xxoooooxx.o.ooox.oo.ooox..o.xxx. x 51".split(" ")
 # args = ".x........x.ox.o...ox.o.x.oxox...oxxo.x.ooxooooo.x.x.o..x.ox.o.. o 4".split(" ")
-# args = "xxxxxxx.xo.ooxxoxooox.oxxoxxooo..xxxo.oxxoxoooo.xoooooo.xooooooo x 21".split(" ")
+# args = "o.xxx.xooxxx..xooxxxxxxooxoxxxxooxoooxooooxxoooo.ooxxooxooo..ooo f1 48 b1".split(" ")
+# args = "..................OOO.....OOO.....OXO......X.................... 11 -2 2".split(" ")
 #Othello
 #Nihal Shah
 
@@ -130,31 +131,29 @@ def parseargs(args):
     digits = {*"0123456789"}
     alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     tokentoplay = ""
-    if len(newargs) <=3:
-        for arg in newargs:
-            if len(arg)==64:
-                board = arg.upper()
-            if arg in tokens:
-                tokentoplay = arg
-            k = {*arg}.intersection(digits)
-            if len(k)>0:
-                if arg[0].upper() in alpha:
-                    accmoves.append(alpha.index(arg[0].upper())+((int(arg[1])-1)*8))
-                else:
+    for arg in newargs:
+        if len(arg)==64:
+            board = arg.upper()
+        if arg in tokens:
+            tokentoplay = arg
+        k = {*arg}.intersection(digits)
+        if len(k)>0:
+            if arg[0].upper() in alpha:
+                accmoves.append(alpha.index(arg[0].upper())+((int(arg[1])-1)*8))
+            else:
+                if int(arg)>=0:
                     accmoves.append(int(arg))
 
     if not board:
         board = '.'*27+"OX......XO"+'.'*27
     board = board.upper()
-    
-    
     if not tokentoplay:
         xcount = board.count('X')
         ocount = board.count('O')
         if xcount<=ocount:
             tokentoplay = 'X'
             possiblemoves = findmoves(board, "O")
-            if not possiblemoves:
+            if not possiblemoves or (xcount+ocount)%2!=0:
                 tokentoplay = 'O'
                 possiblemoves = findmoves(board, "X")
         else:
@@ -171,7 +170,7 @@ def parseargs(args):
     display(board, possiblemoves)
     print(f'{board} {board.count("X")}/{board.count("O")}')
     if(possiblemoves):
-        print("Possible moves for x:", ", ".join([str(val) for val in possiblemoves]))
+        print(f"Possible moves for {tokentoplay.lower()}:", ", ".join([str(val) for val in possiblemoves]))
     else:
         print("No moves possible")
     if not accmoves:
@@ -179,15 +178,24 @@ def parseargs(args):
     if not accmoves:
         return
     # makemove(board, possiblemoves[0], tokentoplay)
-    board = makemove(board, accmoves[0], tokentoplay)
-    print(tokentoplay.lower(), "plays to", accmoves[0])
-    display(board, [])
-    print(f'{board} {board.count("X")}/{board.count("O")}')
-    possiblemoves = findmoves(board,tokentoplay.upper())
-    if(possiblemoves):
-        print("Possible moves for x:", ", ".join([str(val) for val in possiblemoves]))
-    else:
-        print("No moves possible")
+    for move in accmoves:
+        board = makemove(board, move, tokentoplay)
+        print(tokentoplay.lower(), "plays to", move)
+        display(board, [])
+        print(f'{board} {board.count("X")}/{board.count("O")}')
+        possiblemoves = findmoves(board,tokentoplay.upper())
+
+        tokentoplay = ({*'XO'}-{tokentoplay.upper()}).pop()
+        if(possiblemoves):
+            print(f"Possible moves for {tokentoplay.lower()}:", ", ".join([str(val) for val in possiblemoves]))
+        else:
+            possiblemoves = findmoves(board,tokentoplay.upper())
+            tokentoplay = ({*'XO'}-{tokentoplay.upper()}).pop()
+            if(possiblemoves):
+                print(f"Possible moves for {tokentoplay.lower()}:", ", ".join([str(val) for val in possiblemoves]))
+            else:
+                print("No moves possible")
+                return
     # jkl = makemove(board, 57, tokentoplay)
     # display(jkl, [])
 parseargs(args)
