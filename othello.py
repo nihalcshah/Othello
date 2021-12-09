@@ -1,8 +1,8 @@
 import sys; args = sys.argv[1:]
-# args = ['44']
 # args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
 # args = "xxxxxx..xxxoo.o.xxoxooo.xxooooo.xxoooooxx.o.ooox.oo.ooox..o.xxx. x 51".split(" ")
 # args = ".x........x.ox.o...ox.o.x.oxox...oxxo.x.ooxooooo.x.x.o..x.ox.o.. o 4".split(" ")
+# args = "xxxxxxx.xo.ooxxoxooox.oxxoxxooo..xxxo.oxxoxoooo.xoooooo.xooooooo x 21".split(" ")
 #Othello
 #Nihal Shah
 
@@ -45,6 +45,7 @@ def makemove(board, move, tokentoplay):
         ind = s.index(move)
         k = 0
         top = False
+        bottom = False
         oppositecount = 0
         visitedcount = 0
         while ind+k< len(s) and (board[s[ind+k]] in tokens or k==0):
@@ -60,20 +61,31 @@ def makemove(board, move, tokentoplay):
         while ind-m>=0 and (board[s[ind-m]] in tokens or m == 0):
             if board[s[ind-m]] ==tokentoplay:
                 if visitedcount>1:
+                    bottom = True
                     oppositecount += 1
                 break
             m += 1
             visitedcount += 1
-        if not top and oppositecount==1 and ind-m>=0 and m>1:
+        if top and bottom:
             it = ind-1
             while it!=ind-m:
                 board = board[:s[it]]+tokentoplay+board[s[it]+1:]
                 it -= 1
-        elif oppositecount==1 and top and ind+k<len(s):
             it = ind+1
             while it<=ind+k:
                 board = board[:s[it]]+tokentoplay+board[s[it]+1:]
                 it += 1
+        else:
+            if not top and oppositecount==1 and ind-m>=0 and m>1:
+                it = ind-1
+                while it!=ind-m:
+                    board = board[:s[it]]+tokentoplay+board[s[it]+1:]
+                    it -= 1
+            elif oppositecount==1 and top and ind+k<len(s):
+                it = ind+1
+                while it<=ind+k:
+                    board = board[:s[it]]+tokentoplay+board[s[it]+1:]
+                    it += 1
     board = board = board[:move]+tokentoplay+board[move+1:]
     return board
 
@@ -175,7 +187,5 @@ def parseargs(args):
         print("Possible moves for x:", ", ".join([str(val) for val in possiblemoves]))
     else:
         print("No moves possible")
-    # jkl = makemove(board, 57, tokentoplay)
-    # display(jkl, [])
 parseargs(args)
 #Nihal Shah, Period 6, 2023
