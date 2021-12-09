@@ -1,5 +1,6 @@
 import sys; args = sys.argv[1:]
-# args = ['..oooo.xooooooxxxxxoxxo..xooxxoo.xooooo..xxxox....xxxx.......x..', 'o']
+# args = ['44']
+args = "..................x.o.....ooxx..xxxxxx.....ox.......o........... b2".split(" ")
 #Othello
 #Nihal Shah
 
@@ -34,6 +35,7 @@ def display(pzl,possiblemoves):
     for i in range(0,len(pzl),8):
         print(pzl[i:i+8])
     print()
+
 def makemove(board, move, tokentoplay):
     tokentoplay = tokentoplay.upper()
     tokens = {*"XOox"}
@@ -56,15 +58,16 @@ def makemove(board, move, tokentoplay):
                 break
             m += 1
         if not top and oppositecount<2 and ind-m>=0 and m>1:
-            it = ind
+            it = ind-1
             while it!=ind-m:
                 board = board[:s[it]]+tokentoplay+board[s[it]+1:]
                 it -= 1
         elif oppositecount==1 and top and ind+k<len(s):
-            it = ind
+            it = ind+1
             while it<=ind+k:
                 board = board[:s[it]]+tokentoplay+board[s[it]+1:]
                 it += 1
+    board = board = board[:move]+tokentoplay+board[move+1:]
     return board
 
 def findmoves(board, tokentofindmovesplay):
@@ -102,9 +105,11 @@ def findmoves(board, tokentofindmovesplay):
 def parseargs(args):    
     newargs = args
     board = ""
+    accmoves = []
     possiblemoves = []
     tokens = {*"XOox"}
     digits = {*"0123456789"}
+    alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     tokentoplay = ""
     if len(newargs) <=3:
         for arg in newargs:
@@ -114,37 +119,52 @@ def parseargs(args):
                 tokentoplay = arg
             k = {*arg}.intersection(digits)
             if len(k)>0:
-                possiblemoves.append(arg)
+                if arg[0].upper() in alpha:
+                    accmoves.append(alpha.index(arg[0].upper())+((int(arg[1])-1)*8))
+                else:
+                    accmoves.append(int(arg))
 
     if not board:
         board = '.'*27+"OX......XO"+'.'*27
     board = board.upper()
-    display(board, [])
+    
+    
     if not tokentoplay:
         xcount = board.count('X')
         ocount = board.count('O')
         if xcount<=ocount:
             tokentoplay = 'X'
+            possiblemoves = findmoves(board, "O")
             if not possiblemoves:
-                possiblemoves = findmoves(board, "O")
-                if not possiblemoves:
-                    tokentoplay = 'O'
-                    possiblemoves = findmoves(board, "X")
+                tokentoplay = 'O'
+                possiblemoves = findmoves(board, "X")
         else:
             tokentoplay = 'O'
+            possiblemoves = findmoves(board, tokentoplay)
             if not possiblemoves:
+                tokentoplay = 'X'
                 possiblemoves = findmoves(board, tokentoplay)
-                if not possiblemoves:
-                    tokentoplay = 'X'
-                    possiblemoves = findmoves(board, tokentoplay)
     if not possiblemoves:
         if tokentoplay.upper() == 'X':
             possiblemoves = findmoves(board, 'O')
         else:
             possiblemoves = findmoves(board, 'X')
-    # makemove(board, possiblemoves[0], tokentoplay)
-    board = makemove(board, possiblemoves[0], tokentoplay)
+    display(board, possiblemoves)
     print(f'{board} {board.count("X")}/{board.count("O")}')
+    if(possiblemoves):
+        print("Possible moves for x:", ", ".join([str(val) for val in possiblemoves]))
+    else:
+        print("No moves possible")
+    if not accmoves:
+        accmoves = possiblemoves
+    if not accmoves:
+        return
+    # makemove(board, possiblemoves[0], tokentoplay)
+    board = makemove(board, accmoves[0], tokentoplay)
+    print(tokentoplay.lower(), "plays to", accmoves[0])
+    display(board, [])
+    print(f'{board} {board.count("X")}/{board.count("O")}')
+    possiblemoves = findmoves(board,tokentoplay.upper())
     if(possiblemoves):
         print("Possible moves for x:", ", ".join([str(val) for val in possiblemoves]))
     else:
