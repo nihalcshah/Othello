@@ -1,9 +1,7 @@
 import sys; args = sys.argv[1:]
-import time
+
 #Othello
 #Nihal Shah, Period 6, 2023
-
-# args = "oxxoooooxxxxooooxxooxoo..xxoxxo.xxxxoxxxxxxoxoxo.xoooxoox..ox.xo o".split(" ")
 
 def findsets():
     rows = [[j*8+i for i in range(8)] for j in range(8)]
@@ -28,11 +26,6 @@ def findsets():
 
 global d, constraints
 constraints, d = findsets()
-global cache
-cache = {}
-global hitctr
-hitctr = {'makemove':(0,0),'findmoves':(0,0), 'totaltime':(0,0), 'negamax':(0,0), 'negamax_cachehits':(0,0)}
-
 
 def display(pzl,possiblemoves):
     # print(len(pzl))
@@ -98,6 +91,7 @@ def findmoves(board, eTkn):
     moves = set()
     tokens = {*"XOox"}
     for i in range(len(board)):
+    
         if board[i].upper() == eTkn.upper():
             for s in d[i]:
                 ind = s.index(i)
@@ -123,9 +117,7 @@ def findmoves(board, eTkn):
                     moves.add(s[ind+k])
     return sorted(list(moves))
 
-def snapshot(board, tokentoplay = 0, possiblemoves=[]):
-    if tokentoplay == 0:
-        display(board, possiblemoves)
+def snapshot(board, tokentoplay, possiblemoves=[]):
     display(board, possiblemoves)
     print(f'{board} {board.count("X")}/{board.count("O")}')
     if(possiblemoves):
@@ -135,7 +127,6 @@ def snapshot(board, tokentoplay = 0, possiblemoves=[]):
 
 #Function to Parse the arguments.
 def parseargs(args):
-    global hitctr
     board = args[0].upper()
     if not board:
         board = '.'*27+"OX......XO"+'.'*27
@@ -144,28 +135,11 @@ def parseargs(args):
     etkn = ({*"XO"}-{tokentoplay}).pop()
 
     possiblemoves = findmoves(board, etkn)
-    snapshot(board, tokentoplay, possiblemoves)
-    if len(args)>2: #Make the moves
-        for move in args[2:]:
-            if int(move) == -1:
-                tokentoplay = etkn
-                etkn = ({*"XO"}-{tokentoplay}).pop()
-                continue
-            board = makemove(board, int(move), tokentoplay)
-            possiblemoves = findmoves(board, etkn)
-            snapshot(board, tokentoplay, possiblemoves)
-            tokentoplay = etkn
-            etkn = ({*"XO"}-{tokentoplay}).pop()
     # print(quickMove(board, tokentoplay))
     snapshot(board, tokentoplay, possiblemoves)
-    
-    qm = quickMove(board, tokentoplay)
-    print("Desired Move:", qm)
-    t = time.process_time()
     nmoutput = negamax(board, tokentoplay)
-    t = time.process_time()-t
-    hitctr['negamax'] = (hitctr['negamax'][0]+1, hitctr['negamax'][1]+t)
-    # nmoutput = nmoutput[0]
+    nmoutput = nmoutput[0]
+    print("Desired Move:", nmoutput[1][-1])
     print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
     # print(quickMove(board, tokentoplay))
 
@@ -206,50 +180,25 @@ def parseargs2(args):
                 return
 
 def negamax(board,tokentoplay):
-    global cache, hitctr
-    key = (board, tokentoplay)
-    if key in cache:
-        return (cache[key][0], [*cache[key][1]])
-    # eTkn = ({*"XO"}-{tokentoplay}).pop()
-    if tokentoplay == "X":
-        eTkn = "O"
-    else:
-        eTkn = "X"
-    t = time.process_time() 
+    eTkn = ({*"XO"}-{tokentoplay}).pop()
     possiblemoves = findmoves(board, eTkn)
-    t = time.process_time() - t
-    hitctr["findmoves"] = (hitctr["findmoves"][0]+1, hitctr["findmoves"][1]+t)
+
     if not possiblemoves:
-        #Flips the Token
         tokentoplay = eTkn
-        # eTkn = ({*"XO"}-{tokentoplay}).pop()
-        if tokentoplay == "X":
-            eTkn = "O"
-        else:
-            eTkn = "X"
+        eTkn = ({*"XO"}-{tokentoplay}).pop()
         possiblemoves = findmoves(board, eTkn)
         if not possiblemoves:
-            res=  (board.count(eTkn)-board.count(tokentoplay), [])
-            cache[key] = (res[0], [*res[1]])
-            return res
-        else: #If there is a pass
-            # res = []
-            move = negamax(board, tokentoplay)
-            # for move in nm:
-            move[1].append(-1)
-            # res.append((-1*move[0], move[1]))
-            res = (-1*move[0], [*move[1]])
-            cache[key] = (res[0], [*res[1]])
-            # res=[max(res)
-            return res
+            return [(board.count(tokentoplay)-board.count(eTkn), [])]
     res = []
     for mv in possiblemoves:
-        move = negamax(makemove(board,mv,tokentoplay), eTkn)
-        
-        move[1].append(mv)
-        res.append((-1*move[0], [*move[1]]))
-    res = max(res)
-    cache[key] = (res[0], [*res[1]])
+        nm = negamax(makemove(board,mv,tokentoplay), eTkn)
+        for move in nm:
+            move[1].append(mv)
+            res.append((-1*move[0], move[1]))
+
+    res = [max(res)]
+    
+    
     return res
 
 def quickMove(board, token):    
@@ -301,10 +250,6 @@ def quickMove(board, token):
     return minmove
 def main():
     parseargs(args)
-    print(hitctr["findmoves"])
-    print(hitctr["negamax"])
-    # print(hitctr["negamax"])
-    # print(hitctr["negamax_cachehits"])
     # pass
 if __name__ == "__main__":
     main()
