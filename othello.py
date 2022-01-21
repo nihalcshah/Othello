@@ -1,6 +1,4 @@
-from re import M
-import sys
-import token; args = sys.argv[1:]
+import sys; args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
 LIMIT_AB = 11
 import random, time
@@ -31,10 +29,9 @@ constraints, d = findsets()
 global cache
 cache = {}
 global hitctr
-hitctr = {'makemove':(0,0),'findmoves':(0,0), 'totaltime':(0,0), 'negamax':(0,0), 'negamax_cachehits':(0,0)}
+hitctr = {'makemove':(0,0),'findmoves':(0,0), 'totaltime':(0,0), 'negamax':(0,0), 'negamax_cachehits':(0,0) , 'moveexists':[0,0]}
 
-
-def display(pzl,possiblemoves):
+def display(pzl,possiblemoves=[]):
     # print(len(pzl))
     for i in possiblemoves:
         pzl = pzl[:i]+"*"+pzl[i+1:]
@@ -42,7 +39,8 @@ def display(pzl,possiblemoves):
         print(pzl[i:i+8])
     print()
 
-def makemove(board, move, tokentoplay):
+#ORIGINAL MAKEMOVE
+def makemove1(board, move, tokentoplay, moveindexes = {}):
     tokentoplay = tokentoplay.upper()
     tokens = {*"XOox"}
     for s in d[move]:
@@ -93,7 +91,8 @@ def makemove(board, move, tokentoplay):
     board = board = board[:move]+tokentoplay+board[move+1:]
     return board
 
-def findmoves(board, eTkn):
+#ORIGINAL FINDMOVES
+def findmoves1(board, eTkn):
     moves = set()
     tokens = {*"XOox"}
     for i in range(len(board)):
@@ -120,7 +119,87 @@ def findmoves(board, eTkn):
                     moves.add(s[ind-m])
                 elif oppositecount==1 and not top and ind+k<len(s):
                     moves.add(s[ind+k])
-    return sorted(list(moves))
+    return sorted(list(moves)), {}
+
+#NEW MAKEMOVE
+def makemove(board, move, tokentoplay, moveindexes = {}):
+    global hitctr
+    hitctr['moveexists'][1] += 1
+    if move in moveindexes:
+        hitctr['moveexists'][0] += 1
+        board = board[:move]+tokentoplay+board[move+1:]
+        for i in moveindexes[move]:
+            board = board[:i]+tokentoplay+board[i+1:]
+        return board
+    else:
+        tokentoplay = tokentoplay.upper()
+        tokens = {*"XOox"}
+        eTkn = "O" if tokentoplay == "X" else "X"
+        board = board[:move]+tokentoplay+board[move+1:]
+        # print(d[move])
+        for constraintset in d[move]:
+            inbetween = set()
+            characterpos = 65
+            for boardindex in constraintset:
+                if board[boardindex] == tokentoplay:
+                    if characterpos!=65 and inbetween and (characterpos==move or boardindex == move):
+                        for i in inbetween:
+                            board = board[:i]+tokentoplay+board[i+1:]
+                    inbetween.clear()
+                    characterpos = boardindex
+                if board[boardindex] == ".":
+                    inbetween.clear()
+                    characterpos = 65
+                if characterpos!=65 and board[boardindex] == eTkn:
+                    inbetween.add(boardindex)
+        return board
+
+#NEW FINDMOVE
+def findmoves(board, eTkn):
+    board = board.upper()
+    moveindexes = {}
+    moves = []
+    tokentoplay = "X" if eTkn == "O" else "O"
+    for i in range(len(board)):
+        if board[i] == tokentoplay:
+            for constraintset in d[i]:
+                leftside = set()
+                setindex = constraintset.index(i)
+                posindex = 65
+                for index in constraintset[:setindex]:
+                    if board[index] == ".":
+                        posindex=index
+                        leftside.clear()
+                    if board[index] == tokentoplay:
+                        leftside.clear()
+                        posindex = 65
+                    if board[index] == eTkn and posindex!=65:
+                        leftside.add(index)
+                if posindex!=65 and leftside:
+                    moves.append(posindex)
+                    if posindex in moveindexes:
+                        moveindexes[posindex] = moveindexes[posindex].union(leftside)
+                    else:
+                        moveindexes[posindex] = leftside
+                rightside = set()
+                posindex = 65
+                for index in constraintset[setindex+1:][::-1]:
+                    if board[index] == ".":
+                        posindex=index
+                        rightside.clear()
+                    if board[index] == tokentoplay:
+                        rightside.clear()
+                        posindex = 65
+                    if board[index] == eTkn and posindex!=65:
+                        rightside.add(index)
+                if posindex!=65 and rightside:
+                    moves.append(posindex)
+                    if posindex in moveindexes:
+                        moveindexes[posindex] = moveindexes[posindex].union(rightside)
+                    else:
+                        moveindexes[posindex] = rightside
+    
+    return sorted(set(moves)), moveindexes
 
 def snapshot(board, tokentoplay = 0, possiblemoves=[]):
     if tokentoplay == 0:
@@ -142,7 +221,7 @@ def parseargs(args):
 
     etkn = ({*"XO"}-{tokentoplay}).pop()
 
-    possiblemoves = findmoves(board, etkn)
+    possiblemoves, movedict = findmoves(board, etkn)
     snapshot(board, tokentoplay, possiblemoves)
     if len(args)>2: #Make the moves
         moves = args[2]
@@ -151,8 +230,8 @@ def parseargs(args):
                 tokentoplay = etkn
                 etkn = ({*"XO"}-{tokentoplay}).pop()
                 continue
-            board = makemove(board, int(move), tokentoplay)
-            possiblemoves = findmoves(board, etkn)
+            board = makemove(board, int(move), tokentoplay, movedict)
+            possiblemoves, movedict = findmoves(board, etkn)
             # snapshot(board, tokentoplay, possiblemoves)
             tokentoplay = etkn
             etkn = ({*"XO"}-{tokentoplay}).pop()
@@ -162,7 +241,7 @@ def parseargs(args):
     qm = quickMove(board, tokentoplay)
     print("Desired Move:", qm)
     if board.count(".")<LIMIT_AB:
-        nmoutput = negamax(board, tokentoplay)
+        nmoutput = alphabeta(board, tokentoplay, -64,64)
         print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
 
 def randomruns():
@@ -197,7 +276,6 @@ def randomruns():
     worstgames = sorted(gamevalues)[:2]
     return scores, totalscore, totaltokens, worstgames, gamevalues, elapsed
 
-
 def rungame(board, token):
     initialtoken = token
     opposingtoken = "O" if token == "X" else "X"
@@ -205,12 +283,12 @@ def rungame(board, token):
     while board.count(".")>0:
         # print(board)
         eTkn = "O" if token == "X" else "X"
-        possiblemoves = findmoves(board, eTkn)
+        possiblemoves, movedict = findmoves(board, eTkn)
         
         if not possiblemoves:
             token = eTkn
             eTkn = "O" if token == "X" else "X"
-            possiblemoves = findmoves(board, eTkn)
+            possiblemoves, movedict = findmoves(board, eTkn)
             # if board.count(".")<LIMIT_NM:
             #     print(possiblemoves)
             if not possiblemoves:
@@ -225,7 +303,7 @@ def rungame(board, token):
                     condensedtranscript+=str(move)
                 else:
                     condensedtranscript+=f"_{move}"
-                board = makemove(board, move, token)
+                board = makemove(board, move, token, movedict)
                 token = eTkn
             else:
                 nmmove = alphabeta(board, token, -64,64)[1][-1]
@@ -233,7 +311,7 @@ def rungame(board, token):
                     condensedtranscript+=str(nmmove)
                 else:
                     condensedtranscript+=f"_{nmmove}"
-                board = makemove(board, nmmove, token)
+                board = makemove(board, nmmove, token, movedict)
                 token = eTkn
         else: 
             move = random.choice([*possiblemoves])
@@ -241,10 +319,10 @@ def rungame(board, token):
                 condensedtranscript+=str(move)
             else:
                 condensedtranscript+=f"_{move}"
-            board = makemove(board, move, token)
+            board = makemove(board, move, token, movedict)
             token = eTkn
     return condensedtranscript, board.count(initialtoken), board.count(opposingtoken)
- 
+
 def negamax(board,tokentoplay):
     global cache, hitctr
     key = (board, tokentoplay)
@@ -254,7 +332,7 @@ def negamax(board,tokentoplay):
         eTkn = "O"
     else:
         eTkn = "X"
-    possiblemoves = findmoves(board, eTkn)
+    possiblemoves, movedict = findmoves(board, eTkn)
     if not possiblemoves:
         #Flips the Token
         tokentoplay = eTkn
@@ -262,7 +340,7 @@ def negamax(board,tokentoplay):
             eTkn = "O"
         else:
             eTkn = "X"
-        possiblemoves = findmoves(board, eTkn)
+        possiblemoves, movedict = findmoves(board, eTkn)
         if not possiblemoves:
             res=  (board.count(eTkn)-board.count(tokentoplay), [])
             cache[key] = (res[0], [*res[1]])
@@ -275,7 +353,7 @@ def negamax(board,tokentoplay):
             return res
     res = []
     for mv in possiblemoves:
-        move = negamax(makemove(board,mv,tokentoplay), eTkn)
+        move = negamax(makemove(board,mv,tokentoplay, movedict), eTkn)
         move[1].append(mv)
         res.append((-1*move[0], [*move[1]]))
     res = max(res)
@@ -284,11 +362,11 @@ def negamax(board,tokentoplay):
 
 def alphabeta(board, tokentoplay, lower, upper):
     eTkn = "O" if tokentoplay == "X" else "X"
-    possiblemoves = findmoves(board, eTkn)
+    possiblemoves, movedict = findmoves(board, eTkn)
     if not possiblemoves:
         tokentoplay = eTkn
         eTkn = "O" if tokentoplay == "X" else "X"
-        possiblemoves = findmoves(board, eTkn)
+        possiblemoves, movedict = findmoves(board, eTkn)
         if not possiblemoves:
             return (board.count(eTkn)-board.count(tokentoplay), [])
         move = alphabeta(board, tokentoplay, -upper, -lower)
@@ -297,16 +375,13 @@ def alphabeta(board, tokentoplay, lower, upper):
         return res
     best = (lower-1, [])
     for mv in possiblemoves:
-        move = alphabeta(makemove(board,mv,tokentoplay), eTkn, -upper, -lower)
+        move = alphabeta(makemove(board,mv,tokentoplay, movedict), eTkn, -upper, -lower)
         score = -1*move[0]
         if score < lower: continue
         if score > upper: return (score, [mv])
         best = (score, move[1]+[mv])
         lower = score+1
     return best
-        # move[1].append(mv)
-        # res.append((-1*move[0], [*move[1]]))
-        
 
 def quickMove(board, token):    
     if not board:
@@ -315,7 +390,8 @@ def quickMove(board, token):
     tokens = {*"XO"}
     token2 = (tokens- {token.upper()}).pop()
     board = board.upper()
-    possiblemoves = set(findmoves(board, token2.upper()))
+    possiblemoves, movedict = findmoves(board, token2.upper())
+    possiblemoves = set(possiblemoves)
     # print("move:",possiblemoves)
     for move in possiblemoves:
         if move in {0, 7, 56, 63}:
@@ -347,8 +423,8 @@ def quickMove(board, token):
         if move in rowsstart or move in rowsend or move in colsstart or move in colsend:
             return move
     for move in possiblemoves:
-        b2 = makemove(board, move, token)
-        posmoves = findmoves(b2, token)
+        b2 = makemove(board, move, token, movedict)
+        posmoves, movedict= findmoves(b2, token)
 
         # posmoves = set(posmoves)-{1, 6, 8, 9, 14, 15, 48, 49, 57,54 ,55, 62}
         if len(posmoves)<minmoves:
@@ -357,12 +433,6 @@ def quickMove(board, token):
     return minmove
 
 def main():
-    # board = args[0].upper()
-    # token = args[1].upper()
-    # nmoutput = negamax(board, token)
-    # print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
-    # aboutput = alphabeta(board, token, -64, 64)
-    # print("Min Score:", aboutput[0], "Move sequence:", aboutput[1])
     if args:
         parseargs(args)
     else:
@@ -383,7 +453,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # drawargs(sys.argv[1:])
-    # parseargs(args)
 
 #Nihal Shah, Period 6, 2023
