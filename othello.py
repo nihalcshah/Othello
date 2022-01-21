@@ -2,7 +2,7 @@ from re import M
 import sys
 import token; args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
-LIMIT_NM = 11
+LIMIT_AB = 11
 import random, time
 
 def findsets():
@@ -161,7 +161,7 @@ def parseargs(args):
     
     qm = quickMove(board, tokentoplay)
     print("Desired Move:", qm)
-    if board.count(".")<LIMIT_NM:
+    if board.count(".")<LIMIT_AB:
         nmoutput = negamax(board, tokentoplay)
         print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
 
@@ -173,7 +173,7 @@ def randomruns():
     scorecounter = 0
     totalscore = 0
     totaltokens = 0
-    for i in range(3):
+    for i in range(100):
         board = "."*27+"OX......XO"+"."*27
         transcript, pcount, ocount = rungame(board, tokentoplay)
         score = pcount-ocount
@@ -191,7 +191,7 @@ def randomruns():
         gamevalues[score]= (transcript, i+1, tokentoplay)
         #Alternate Token
         tokentoplay = "O" if tokentoplay == "X" else "X"
-        print("Move", i+1, time.process_time() - t, "seconds")
+        # print("Move", i+1, time.process_time() - t, "seconds")
         # print(board)
     elapsed = time.process_time() - t
     worstgames = sorted(gamevalues)[:2]
@@ -218,7 +218,7 @@ def rungame(board, token):
             else:
                 condensedtranscript+="-1"
         if token == initialtoken:
-            if board.count(".")>=LIMIT_NM:
+            if board.count(".")>=LIMIT_AB:
                 move = quickMove(board, token)
                 # print("Quick Move:", move)
                 if len(str(move))>1:
@@ -228,7 +228,7 @@ def rungame(board, token):
                 board = makemove(board, move, token)
                 token = eTkn
             else:
-                nmmove = negamax(board, token)[1][-1]
+                nmmove = alphabeta(board, token, -64,64)[1][-1]
                 if len(str(move))>1:
                     condensedtranscript+=str(nmmove)
                 else:
@@ -371,7 +371,7 @@ def main():
         print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
         Score = (totalscore/totaltokens) *100
         print("Score:", Score)
-        print("NM Limit:" , LIMIT_NM)
+        print("AB Limit:" , LIMIT_AB)
         for gamescore in worstgames:
             gamevals = gamevalues[gamescore]
             gamenumber = gamevals[1]
