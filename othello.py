@@ -1,6 +1,6 @@
 import sys; args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
-LIMIT_AB = 11
+LIMIT_AB = 1
 import random, time
 
 def findsets():
@@ -29,7 +29,8 @@ constraints, d = findsets()
 global cache
 cache = {}
 global hitctr
-hitctr = {'makemove':(0,0),'findmoves':(0,0), 'totaltime':(0,0), 'negamax':(0,0), 'negamax_cachehits':(0,0) , 'moveexists':[0,0]}
+# print(constraints)
+hitctr = {'makemove':(0,0),'findmoves':(0,0), 'findmovestime':0, 'totaltime':0, 'makemovetime':0}
 
 def display(pzl,possiblemoves=[]):
     # print(len(pzl))
@@ -38,98 +39,15 @@ def display(pzl,possiblemoves=[]):
     for i in range(0,len(pzl),8):
         print(pzl[i:i+8])
     print()
-
-#ORIGINAL MAKEMOVE
-def makemove1(board, move, tokentoplay, moveindexes = {}):
-    tokentoplay = tokentoplay.upper()
-    tokens = {*"XOox"}
-    for s in d[move]:
-        ind = s.index(move)
-        k = 0
-        top = False
-        bottom = False
-        oppositecount = 0
-        visitedcount = 0
-        while ind+k< len(s) and (board[s[ind+k]] in tokens or k==0):
-            if board[s[ind+k]] == tokentoplay:
-                if visitedcount>1:
-                    oppositecount += 1
-                    top = True
-                break
-            k += 1
-            visitedcount += 1
-        m = 0
-        visitedcount = 0
-        while ind-m>=0 and (board[s[ind-m]] in tokens or m == 0):
-            if board[s[ind-m]] ==tokentoplay:
-                if visitedcount>1:
-                    bottom = True
-                    oppositecount += 1
-                break
-            m += 1
-            visitedcount += 1
-        if top and bottom:
-            it = ind-1
-            while it!=ind-m:
-                board = board[:s[it]]+tokentoplay+board[s[it]+1:]
-                it -= 1
-            it = ind+1
-            while it<=ind+k:
-                board = board[:s[it]]+tokentoplay+board[s[it]+1:]
-                it += 1
-        else:
-            if not top and oppositecount==1 and ind-m>=0 and m>1:
-                it = ind-1
-                while it!=ind-m:
-                    board = board[:s[it]]+tokentoplay+board[s[it]+1:]
-                    it -= 1
-            elif oppositecount==1 and top and ind+k<len(s):
-                it = ind+1
-                while it<=ind+k:
-                    board = board[:s[it]]+tokentoplay+board[s[it]+1:]
-                    it += 1
-    board = board = board[:move]+tokentoplay+board[move+1:]
-    return board
-
-#ORIGINAL FINDMOVES
-def findmoves1(board, eTkn):
-    moves = set()
-    tokens = {*"XOox"}
-    for i in range(len(board)):
-        if board[i].upper() == eTkn.upper():
-            for s in d[i]:
-                ind = s.index(i)
-                k = 0
-                top = False
-                oppositecount = 0
-                while ind+k< len(s) and board[s[ind+k]] in tokens:
-                    
-                    if board[s[ind+k]] != eTkn:
-                        oppositecount += 1
-                        top = True
-                        break
-                    k += 1
-                m = 0
-                while ind-m>=0 and board[s[ind-m]] in tokens:
-                    if board[s[ind-m]] != eTkn:
-                        oppositecount += 1
-                        break
-                    m += 1
-                if top and oppositecount<2 and ind-m>=0:
-                    moves.add(s[ind-m])
-                elif oppositecount==1 and not top and ind+k<len(s):
-                    moves.add(s[ind+k])
-    return sorted(list(moves)), {}
-
 #NEW MAKEMOVE
 def makemove(board, move, tokentoplay, moveindexes = {}):
     global hitctr
-    hitctr['moveexists'][1] += 1
+    t = time.process_time()
     if move in moveindexes:
-        hitctr['moveexists'][0] += 1
         board = board[:move]+tokentoplay+board[move+1:]
         for i in moveindexes[move]:
             board = board[:i]+tokentoplay+board[i+1:]
+        hitctr['makemovetime'] += time.process_time()-t
         return board
     else:
         tokentoplay = tokentoplay.upper()
@@ -152,53 +70,45 @@ def makemove(board, move, tokentoplay, moveindexes = {}):
                     characterpos = 65
                 if characterpos!=65 and board[boardindex] == eTkn:
                     inbetween.add(boardindex)
+        hitctr['makemovetime'] += time.process_time()-t
         return board
-
-#NEW FINDMOVE
 def findmoves(board, eTkn):
+    global hitctr
+    t = time.process_time()
     board = board.upper()
     moveindexes = {}
     moves = []
     tokentoplay = "X" if eTkn == "O" else "O"
-    for i in range(len(board)):
-        if board[i] == tokentoplay:
-            for constraintset in d[i]:
-                leftside = set()
-                setindex = constraintset.index(i)
-                posindex = 65
-                for index in constraintset[:setindex]:
-                    if board[index] == ".":
-                        posindex=index
-                        leftside.clear()
-                    if board[index] == tokentoplay:
-                        leftside.clear()
-                        posindex = 65
-                    if board[index] == eTkn and posindex!=65:
-                        leftside.add(index)
-                if posindex!=65 and leftside:
-                    moves.append(posindex)
-                    if posindex in moveindexes:
-                        moveindexes[posindex] = moveindexes[posindex].union(leftside)
-                    else:
-                        moveindexes[posindex] = leftside
-                rightside = set()
-                posindex = 65
-                for index in constraintset[setindex+1:][::-1]:
-                    if board[index] == ".":
-                        posindex=index
-                        rightside.clear()
-                    if board[index] == tokentoplay:
-                        rightside.clear()
-                        posindex = 65
-                    if board[index] == eTkn and posindex!=65:
-                        rightside.add(index)
-                if posindex!=65 and rightside:
-                    moves.append(posindex)
-                    if posindex in moveindexes:
-                        moveindexes[posindex] = moveindexes[posindex].union(rightside)
-                    else:
-                        moveindexes[posindex] = rightside
-    
+    for settype in constraints:
+        for constraintset in settype:
+            inbetween = set()
+            tknindex = 65
+            tknmarked = " "
+            for setindex, boardindex in enumerate(constraintset):
+                if (board[boardindex] == tokentoplay or board[boardindex] == "."):
+                    if tknindex!=65:
+                        if board[boardindex]!=tknmarked and inbetween:
+                            if boardindex ==31:
+                                store = 0
+                            if tknmarked == ".":
+                                moves.append(tknindex)
+                                if tknindex in moveindexes:
+                                    moveindexes[tknindex] = moveindexes[tknindex].union(inbetween)
+                                else:
+                                    moveindexes[tknindex] = {*inbetween}
+                            else:
+                                moves.append(boardindex)
+                                if boardindex in moveindexes:
+                                    moveindexes[boardindex] = moveindexes[boardindex].union(inbetween)
+                                else:
+                                    moveindexes[boardindex] = {*inbetween}
+                        inbetween.clear()
+                    tknindex = boardindex
+                    tknmarked = board[boardindex]
+                else:
+                    if tknindex!=65:
+                        inbetween.add(boardindex)
+    hitctr['findmovestime'] += time.process_time()-t
     return sorted(set(moves)), moveindexes
 
 def snapshot(board, tokentoplay = 0, possiblemoves=[]):
@@ -210,7 +120,6 @@ def snapshot(board, tokentoplay = 0, possiblemoves=[]):
         print(f"Possible moves for {tokentoplay.lower()}:", ", ".join([str(val) for val in possiblemoves]))
     else:
         print("No moves possible")
-
 #Function to Parse the arguments and run Negamax or Quickmove if arguments are present.
 def parseargs(args):
     global key
@@ -252,19 +161,25 @@ def randomruns():
     scorecounter = 0
     totalscore = 0
     totaltokens = 0
+    scoresby10 = ""
     for i in range(100):
         board = "."*27+"OX......XO"+"."*27
         transcript, pcount, ocount = rungame(board, tokentoplay)
         score = pcount-ocount
         totaltokens += pcount+ocount
         #Score Calculations
-        scores += str(score)
+        if len(str(score))>1:
+            scoresby10 += str(score)
+        else:
+            scoresby10 += " "+str(score)
         scorecounter += 1
         if scorecounter == 10:
-            scores += "\n"
+            print(scoresby10)
+            # scores += scoresby10 +"\n"
+            scoresby10 = ""
             scorecounter = 0
         else:
-            scores += " "
+            scoresby10 += " "
         totalscore += score
         #Game Values
         gamevalues[score]= (transcript, i+1, tokentoplay)
@@ -274,7 +189,7 @@ def randomruns():
         # print(board)
     elapsed = time.process_time() - t
     worstgames = sorted(gamevalues)[:2]
-    return scores, totalscore, totaltokens, worstgames, gamevalues, elapsed
+    return totalscore, totaltokens, worstgames, gamevalues, elapsed
 
 def rungame(board, token):
     initialtoken = token
@@ -284,13 +199,12 @@ def rungame(board, token):
         # print(board)
         eTkn = "O" if token == "X" else "X"
         possiblemoves, movedict = findmoves(board, eTkn)
-        
+        # print(possiblemoves)
         if not possiblemoves:
+            # print("hi")
             token = eTkn
             eTkn = "O" if token == "X" else "X"
             possiblemoves, movedict = findmoves(board, eTkn)
-            # if board.count(".")<LIMIT_NM:
-            #     print(possiblemoves)
             if not possiblemoves:
                 break
             else:
@@ -307,7 +221,7 @@ def rungame(board, token):
                 token = eTkn
             else:
                 nmmove = alphabeta(board, token, -64,64)[1][-1]
-                if len(str(move))>1:
+                if len(str(nmmove))>1:
                     condensedtranscript+=str(nmmove)
                 else:
                     condensedtranscript+=f"_{nmmove}"
@@ -431,24 +345,45 @@ def quickMove(board, token):
             minmoves = len(posmoves)
             minmove = move
     return minmove
+    # return possiblemoves.pop()
+
+def collectstats():
+    global LIMIT_AB
+    # f = open("stats.txt", "w")
+    times = ""
+    scores = ""
+    for i in range(12):
+        totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
+        print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
+        print("AB Limit:" , LIMIT_AB)
+        Score = (totalscore/totaltokens) *100
+        times += f"{elapsed:.1f} "
+        scores += f"{Score:.1f} "
+        print(f"{Score:.1f}")
+        print(f"{elapsed:.1f}")
+        LIMIT_AB +=1
+    print(times)
+    print(scores)
 
 def main():
-    if args:
-        parseargs(args)
-    else:
-        scores, totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
-        print(scores, "\n")
-        print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
-        Score = (totalscore/totaltokens) *100
-        print("Score:", Score)
-        print("AB Limit:" , LIMIT_AB)
-        for gamescore in worstgames:
-            gamevals = gamevalues[gamescore]
-            gamenumber = gamevals[1]
-            transcript = gamevals[0]
-            token =  gamevals[2]
-            print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
-        print("Elapsed time:", elapsed)
+    collectstats()
+    # if args:
+    #     parseargs(args)
+    # else:
+    #     totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
+    #     print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
+    #     Score = (totalscore/totaltokens) *100
+    #     print("Score:", Score)
+    #     print("AB Limit:" , LIMIT_AB)
+    #     for gamescore in worstgames:
+    #         gamevals = gamevalues[gamescore]
+    #         gamenumber = gamevals[1]
+    #         transcript = gamevals[0]
+    #         token =  gamevals[2]
+    #         print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
+    #     print("Elapsed time:", elapsed)
+
+    
 
 
 if __name__ == "__main__":
