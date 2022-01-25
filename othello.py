@@ -1,6 +1,6 @@
 import sys; args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
-LIMIT_AB = 1
+LIMIT_AB = 12
 import random, time
 
 def findsets():
@@ -77,39 +77,40 @@ def findmoves(board, eTkn):
     t = time.process_time()
     board = board.upper()
     moveindexes = {}
-    moves = []
+    moves = set()
     tokentoplay = "X" if eTkn == "O" else "O"
-    for settype in constraints:
-        for constraintset in settype:
-            inbetween = set()
-            tknindex = 65
-            tknmarked = " "
-            for setindex, boardindex in enumerate(constraintset):
-                if (board[boardindex] == tokentoplay or board[boardindex] == "."):
-                    if tknindex!=65:
-                        if board[boardindex]!=tknmarked and inbetween:
-                            if boardindex ==31:
-                                store = 0
-                            if tknmarked == ".":
-                                moves.append(tknindex)
-                                if tknindex in moveindexes:
-                                    moveindexes[tknindex] = moveindexes[tknindex].union(inbetween)
+    for i in range(len(board)):
+        if board[i] == "." and i not in moves:
+            for constraintset in d[i]:
+                inbetween = set()
+                tknindex = 65
+                tknmarked = " "
+                for setindex, boardindex in enumerate(constraintset):
+                    if (board[boardindex] == tokentoplay or board[boardindex] == "."):
+                        if tknindex!=65:
+                            if board[boardindex]!=tknmarked and inbetween:
+                                if boardindex ==7:
+                                    store = 0
+                                if tknmarked == ".":
+                                    moves.add(tknindex)
+                                    if tknindex in moveindexes:
+                                        moveindexes[tknindex] = moveindexes[tknindex].union(inbetween)
+                                    else:
+                                        moveindexes[tknindex] = {*inbetween}
                                 else:
-                                    moveindexes[tknindex] = {*inbetween}
-                            else:
-                                moves.append(boardindex)
-                                if boardindex in moveindexes:
-                                    moveindexes[boardindex] = moveindexes[boardindex].union(inbetween)
-                                else:
-                                    moveindexes[boardindex] = {*inbetween}
-                        inbetween.clear()
-                    tknindex = boardindex
-                    tknmarked = board[boardindex]
-                else:
-                    if tknindex!=65:
-                        inbetween.add(boardindex)
+                                    moves.add(boardindex)
+                                    if boardindex in moveindexes:
+                                        moveindexes[boardindex] = moveindexes[boardindex].union(inbetween)
+                                    else:
+                                        moveindexes[boardindex] = {*inbetween}
+                            inbetween.clear()
+                        tknindex = boardindex
+                        tknmarked = board[boardindex]
+                    else:
+                        if tknindex!=65:
+                            inbetween.add(boardindex)
     hitctr['findmovestime'] += time.process_time()-t
-    return sorted(set(moves)), moveindexes
+    return sorted(list(moves)), moveindexes
 
 def snapshot(board, tokentoplay = 0, possiblemoves=[]):
     if tokentoplay == 0:
@@ -120,35 +121,69 @@ def snapshot(board, tokentoplay = 0, possiblemoves=[]):
         print(f"Possible moves for {tokentoplay.lower()}:", ", ".join([str(val) for val in possiblemoves]))
     else:
         print("No moves possible")
-#Function to Parse the arguments and run Negamax or Quickmove if arguments are present.
+
 def parseargs(args):
-    global key
-    board = args[0].upper()
+    moves = []
+    tokentoplay = ""
+    board = ""
+    condensedmoves = ""
+    for arg in args:
+        if arg.isdigit():
+            moves.append(int(arg))
+        elif len(arg) == 1:
+            tokentoplay = arg.upper()
+        elif len({*arg})<=3:
+            board = arg.upper()
+        else: 
+            condensedmoves = arg
     if not board:
         board = '.'*27+"OX......XO"+'.'*27
-    tokentoplay = args[1].upper()
+    if not tokentoplay:
+        xcount = board.count('X')
+        ocount = board.count('O')
+        if xcount<=ocount:
+            tokentoplay = 'X'
+            possiblemoves, movedict = findmoves(board, "O")
+            if not possiblemoves or (xcount+ocount)%2!=0:
+                tokentoplay = 'O'
+                possiblemoves, movedict = findmoves(board, "X")
+        else:
+            tokentoplay = 'O'
+            possiblemoves, movedict = findmoves(board, "X")
+            if not possiblemoves:
+                tokentoplay = 'X'
+    return board, tokentoplay, moves, condensedmoves
 
-    etkn = ({*"XO"}-{tokentoplay}).pop()
 
+#Function to Parse the arguments and run Negamax or Quickmove if arguments are present.
+def givenargs(args):
+    board, tokentoplay, moves, condensedmoves = parseargs(args)
+    etkn = "O" if tokentoplay == "X" else "X"
     possiblemoves, movedict = findmoves(board, etkn)
     snapshot(board, tokentoplay, possiblemoves)
-    if len(args)>2: #Make the moves
-        moves = args[2]
-        for move in moves:
-            if int(move) == -1:
-                tokentoplay = etkn
-                etkn = ({*"XO"}-{tokentoplay}).pop()
-                continue
-            board = makemove(board, int(move), tokentoplay, movedict)
-            possiblemoves, movedict = findmoves(board, etkn)
-            # snapshot(board, tokentoplay, possiblemoves)
+    # if len(args)>2: #Make the moves
+    if condensedmoves:
+        accmoves = condensedmoves
+        moves = [int(accmoves[k:k+2].replace("_", "")) for k in range(0,len(accmoves),2) if int(accmoves[k:k+2].replace("_", ""))>=0]
+    for move in moves:
+        if int(move) == -1:
             tokentoplay = etkn
             etkn = ({*"XO"}-{tokentoplay}).pop()
+            continue
+        board = makemove(board, int(move), tokentoplay, movedict)
+        # print(tokentoplay, "plays to", move)
+        tokentoplay = etkn
+        etkn = 'O' if tokentoplay == 'X' else 'X'
+        possiblemoves, movedict = findmoves(board, etkn)
+        
+        # snapshot(board, tokentoplay, possiblemoves)
+        # tokentoplay = etkn
+        
     # print(quickMove(board, tokentoplay))
     snapshot(board, tokentoplay, possiblemoves)
     
     qm = quickMove(board, tokentoplay)
-    print("Desired Move:", qm)
+    print("My Preferred Move is", qm)
     if board.count(".")<LIMIT_AB:
         nmoutput = alphabeta(board, tokentoplay, -64,64)
         print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
@@ -221,6 +256,7 @@ def rungame(board, token):
                 token = eTkn
             else:
                 nmmove = alphabeta(board, token, -64,64)[1][-1]
+                # nmmove = negamax(board, token)[1][-1]
                 if len(str(nmmove))>1:
                     condensedtranscript+=str(nmmove)
                 else:
@@ -336,20 +372,19 @@ def quickMove(board, token):
     for move in possiblemoves:
         if move in rowsstart or move in rowsend or move in colsstart or move in colsend:
             return move
-    for move in possiblemoves:
-        b2 = makemove(board, move, token, movedict)
-        posmoves, movedict= findmoves(b2, token)
+    # for move in possiblemoves:
+    #     b2 = makemove(board, move, token, movedict)
+    #     posmoves, movedict= findmoves(b2, token)
 
-        # posmoves = set(posmoves)-{1, 6, 8, 9, 14, 15, 48, 49, 57,54 ,55, 62}
-        if len(posmoves)<minmoves:
-            minmoves = len(posmoves)
-            minmove = move
-    return minmove
-    # return possiblemoves.pop()
+    #     # posmoves = set(posmoves)-{1, 6, 8, 9, 14, 15, 48, 49, 57,54 ,55, 62}
+    #     if len(posmoves)<minmoves:
+    #         minmoves = len(posmoves)
+    #         minmove = move
+    # return minmove
+    return possiblemoves.pop()
 
 def collectstats():
     global LIMIT_AB
-    # f = open("stats.txt", "w")
     times = ""
     scores = ""
     for i in range(12):
@@ -366,25 +401,22 @@ def collectstats():
     print(scores)
 
 def main():
-    collectstats()
-    # if args:
-    #     parseargs(args)
-    # else:
-    #     totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
-    #     print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
-    #     Score = (totalscore/totaltokens) *100
-    #     print("Score:", Score)
-    #     print("AB Limit:" , LIMIT_AB)
-    #     for gamescore in worstgames:
-    #         gamevals = gamevalues[gamescore]
-    #         gamenumber = gamevals[1]
-    #         transcript = gamevals[0]
-    #         token =  gamevals[2]
-    #         print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
-    #     print("Elapsed time:", elapsed)
-
-    
-
+    # collectstats()
+    if args:
+        givenargs(args)
+    else:
+        totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
+        print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
+        Score = (totalscore/totaltokens) *100
+        print("Score:", f"{Score:.1f}%")
+        print("NM/AB Limit:" , LIMIT_AB)
+        for gamescore in worstgames:
+            gamevals = gamevalues[gamescore]
+            gamenumber = gamevals[1]
+            transcript = gamevals[0]
+            token =  gamevals[2]
+            print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
+        print("Elapsed time:", f"{elapsed:.1f}s")
 
 if __name__ == "__main__":
     main()
