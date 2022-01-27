@@ -1,4 +1,4 @@
-import sys; args = sys.argv[1:]
+import sys;args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
 LIMIT_AB = 12
 import random, time
@@ -22,6 +22,7 @@ def findsets():
                     else:
                         d[i].append(line)
     # print(d[57])
+
     return constraints, d
 
 global d, constraints
@@ -72,20 +73,32 @@ def makemove(board, move, tokentoplay, moveindexes = {}):
                     inbetween.add(boardindex)
         hitctr['makemovetime'] += time.process_time()-t
         return board
+
 def findmoves(board, eTkn):
     global hitctr
     t = time.process_time()
     board = board.upper()
     moveindexes = {}
     moves = set()
+    csnames = {}
     tokentoplay = "X" if eTkn == "O" else "O"
     for i in range(len(board)):
-        if board[i] == "." and i not in moves:
+        if board[i] == ".":
             for constraintset in d[i]:
+                # key = (0, [*constraintset]))
+                setstr = "".join([str(val) for val in constraintset])
+                if setstr in csnames:
+                    continue
+                else:
+                    csnames[setstr] = 1
                 inbetween = set()
                 tknindex = 65
                 tknmarked = " "
+                setstr = ""
                 for setindex, boardindex in enumerate(constraintset):
+                    # setstr += f"{boardindex}"
+                    if boardindex == 54:
+                        store =1
                     if (board[boardindex] == tokentoplay or board[boardindex] == "."):
                         if tknindex!=65:
                             if board[boardindex]!=tknmarked and inbetween:
@@ -109,8 +122,9 @@ def findmoves(board, eTkn):
                     else:
                         if tknindex!=65:
                             inbetween.add(boardindex)
+                # csnames[setstr] = 1
     hitctr['findmovestime'] += time.process_time()-t
-    return sorted(list(moves)), moveindexes
+    return sorted(list({*moves})), moveindexes
 
 def snapshot(board, tokentoplay = 0, possiblemoves=[]):
     if tokentoplay == 0:
@@ -128,11 +142,12 @@ def parseargs(args):
     board = ""
     condensedmoves = ""
     for arg in args:
-        if arg.isdigit():
+        if arg.isdigit() and len(arg)<=3:
             moves.append(int(arg))
         elif len(arg) == 1:
             tokentoplay = arg.upper()
         elif len({*arg})<=3:
+            print(len({*arg}))
             board = arg.upper()
         else: 
             condensedmoves = arg
@@ -166,21 +181,22 @@ def givenargs(args):
         accmoves = condensedmoves
         moves = [int(accmoves[k:k+2].replace("_", "")) for k in range(0,len(accmoves),2) if int(accmoves[k:k+2].replace("_", ""))>=0]
     for move in moves:
-        if int(move) == -1:
+        if int(move) <0:
             tokentoplay = etkn
             etkn = ({*"XO"}-{tokentoplay}).pop()
             continue
+        if move == 52:
+            st = 1
         board = makemove(board, int(move), tokentoplay, movedict)
-        # print(tokentoplay, "plays to", move)
+        # print()
+        print(tokentoplay, "plays to", move)
         tokentoplay = etkn
         etkn = 'O' if tokentoplay == 'X' else 'X'
         possiblemoves, movedict = findmoves(board, etkn)
-        
-        # snapshot(board, tokentoplay, possiblemoves)
         # tokentoplay = etkn
-        
+        snapshot(board, tokentoplay, possiblemoves)
+        print()
     # print(quickMove(board, tokentoplay))
-    snapshot(board, tokentoplay, possiblemoves)
     
     qm = quickMove(board, tokentoplay)
     print("My Preferred Move is", qm)
@@ -215,7 +231,8 @@ def randomruns():
             scorecounter = 0
         else:
             scoresby10 += " "
-        totalscore += score
+        # totalscore += score
+        totalscore += pcount
         #Game Values
         gamevalues[score]= (transcript, i+1, tokentoplay)
         #Alternate Token
@@ -230,6 +247,15 @@ def rungame(board, token):
     initialtoken = token
     opposingtoken = "O" if token == "X" else "X"
     condensedtranscript = ""
+    if initialtoken != "X":
+        possiblemoves = [19, 26, 37, 44]
+        movedict = {19: {27}, 44: {36}, 26: {27}, 37: {36}}
+        move = random.choice([*possiblemoves])
+        if len(str(move))>1:
+            condensedtranscript+=str(move)
+        else:
+            condensedtranscript+=f"_{move}"
+        board = makemove(board, move, opposingtoken, movedict)
     while board.count(".")>0:
         # print(board)
         eTkn = "O" if token == "X" else "X"
@@ -381,7 +407,8 @@ def quickMove(board, token):
     #         minmoves = len(posmoves)
     #         minmove = move
     # return minmove
-    return possiblemoves.pop()
+    if possiblemoves:
+        return possiblemoves.pop()
 
 def collectstats():
     global LIMIT_AB
