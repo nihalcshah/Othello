@@ -142,12 +142,11 @@ def parseargs(args):
     board = ""
     condensedmoves = ""
     for arg in args:
-        if arg.isdigit() and len(arg)<=3:
-            moves.append(int(arg))
-        elif len(arg) == 1:
+        if len(arg) == 1:
             tokentoplay = arg.upper()
+        elif len(arg)<=3:
+            moves.append(int(arg))
         elif len({*arg})<=3:
-            print(len({*arg}))
             board = arg.upper()
         else: 
             condensedmoves = arg
@@ -167,6 +166,7 @@ def parseargs(args):
             possiblemoves, movedict = findmoves(board, "X")
             if not possiblemoves:
                 tokentoplay = 'X'
+    
     return board, tokentoplay, moves, condensedmoves
 
 
