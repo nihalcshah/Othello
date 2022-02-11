@@ -1,8 +1,6 @@
 import sys;args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
 LIMIT_AB = 11
-MG_UPPER_LIMIT_AB = 45
-MG_LOWER_LIMIT_AB = 40
 import random, time
 
 def findsets():
@@ -31,11 +29,9 @@ global d, constraints
 constraints, d = findsets()
 global cache
 cache = {}
-global movecache
-movecache = {}
 global hitctr
 # print(constraints)
-hitctr = {'movescache':0,'findmoves':(0,0), 'findmovestime':0, 'totaltime':0, 'makemovetime':0}
+hitctr = {'makemove':(0,0),'findmoves':(0,0), 'findmovestime':0, 'totaltime':0, 'makemovetime':0}
 
 def display(pzl,possiblemoves=[]):
     # print(len(pzl))
@@ -78,17 +74,14 @@ def makemove(board, move, tokentoplay, moveindexes = {}):
         hitctr['makemovetime'] += time.process_time()-t
         return board
 
-def findmoves(board, tokentoplay):
-    global hitctr, movecache
+def findmoves(board, eTkn):
+    global hitctr
     t = time.process_time()
     board = board.upper()
     moveindexes = {}
     moves = set()
     csnames = {}
-    key = (board, tokentoplay)
-    # if key in movecache:
-    #     return movecache[key][0], movecache[key][1]
-    eTkn = "X" if tokentoplay == "O" else "O"
+    tokentoplay = "X" if eTkn == "O" else "O"
     for i in range(len(board)):
         if board[i] == ".":
             for constraintset in d[i]:
@@ -131,8 +124,6 @@ def findmoves(board, tokentoplay):
                             inbetween.add(boardindex)
                 # csnames[setstr] = 1
     hitctr['findmovestime'] += time.process_time()-t
-    val = (sorted(list({*moves})), moveindexes.copy())
-    movecache[key] = val
     return sorted(list({*moves})), moveindexes
 
 def snapshot(board, tokentoplay = 0, possiblemoves=[]):
@@ -166,46 +157,24 @@ def parseargs(args):
         ocount = board.count('O')
         if xcount<=ocount:
             tokentoplay = 'X'
-            possiblemoves, movedict = findmoves(board, 'X')
+            possiblemoves, movedict = findmoves(board, "O")
             if not possiblemoves or (xcount+ocount)%2!=0:
                 tokentoplay = 'O'
-                possiblemoves, movedict = findmoves(board, "O")
+                possiblemoves, movedict = findmoves(board, "X")
         else:
             tokentoplay = 'O'
-            possiblemoves, movedict = findmoves(board, "O")
+            possiblemoves, movedict = findmoves(board, "X")
             if not possiblemoves:
                 tokentoplay = 'X'
     
     return board, tokentoplay, moves, condensedmoves
 
-def mgalphabeta(board, tokentoplay, lower, upper):
-    eTkn = "O" if tokentoplay == "X" else "X"
-    possiblemoves, movedict = findmoves(board, tokentoplay)
-    if not possiblemoves:
-        tokentoplay = eTkn
-        eTkn = "O" if tokentoplay == "X" else "X"
-        possiblemoves, movedict = findmoves(board, tokentoplay)
-        if not possiblemoves:
-            score = (0)
-            return (board.count(eTkn)-board.count(tokentoplay), [])
-        move = mgalphabeta(board, tokentoplay, -upper, -lower)
-        move[1].append(-1)
-        res = (-1*move[0], [*move[1]])
-        return res
-    best = (lower-1, [])
-    for mv in possiblemoves:
-        move = mgalphabeta(makemove(board,mv,tokentoplay, movedict), eTkn, -upper, -lower)
-        score = -1*move[0]
-        if score < lower: continue
-        if score > upper: return (score, [mv])
-        best = (score, move[1]+[mv])
-        lower = score+1
-    return best
+
 #Function to Parse the arguments and run Negamax or Quickmove if arguments are present.
 def givenargs(args):
     board, tokentoplay, moves, condensedmoves = parseargs(args)
     etkn = "O" if tokentoplay == "X" else "X"
-    possiblemoves, movedict = findmoves(board, tokentoplay)
+    possiblemoves, movedict = findmoves(board, etkn)
     snapshot(board, tokentoplay, possiblemoves)
     # if len(args)>2: #Make the moves
     if condensedmoves:
@@ -223,7 +192,7 @@ def givenargs(args):
         print(tokentoplay, "plays to", move)
         tokentoplay = etkn
         etkn = 'O' if tokentoplay == 'X' else 'X'
-        possiblemoves, movedict = findmoves(board, tokentoplay)
+        possiblemoves, movedict = findmoves(board, etkn)
         # tokentoplay = etkn
         snapshot(board, tokentoplay, possiblemoves)
         print()
@@ -235,7 +204,7 @@ def givenargs(args):
         nmoutput = alphabeta(board, tokentoplay, -64,64)
         print("Min Score:", nmoutput[0], "Move sequence:", nmoutput[1])
 
-def randomruns():
+def randomruns(desiredgame):
     tokentoplay = "X"
     gamevalues = {}
     t = time.process_time()
@@ -246,7 +215,7 @@ def randomruns():
     scoresby10 = ""
     for i in range(100):
         board = "."*27+"OX......XO"+"."*27
-        transcript, pcount, ocount = rungame(board, tokentoplay)
+        transcript, pcount, ocount = rungame(board, tokentoplay, desiredgame)
         score = pcount-ocount
         totaltokens += pcount+ocount
         #Score Calculations
@@ -274,7 +243,7 @@ def randomruns():
     worstgames = sorted(gamevalues)[:2]
     return totalscore, totaltokens, worstgames, gamevalues, elapsed
 
-def rungame(board, token):
+def rungame(board, token, desiredgame):
     initialtoken = token
     opposingtoken = "O" if token == "X" else "X"
     condensedtranscript = ""
@@ -290,28 +259,19 @@ def rungame(board, token):
     while board.count(".")>0:
         # print(board)
         eTkn = "O" if token == "X" else "X"
-        possiblemoves, movedict = findmoves(board, token)
+        possiblemoves, movedict = findmoves(board, eTkn)
         # print(possiblemoves)
         if not possiblemoves:
             # print("hi")
             token = eTkn
             eTkn = "O" if token == "X" else "X"
-            possiblemoves, movedict = findmoves(board, token)
+            possiblemoves, movedict = findmoves(board, eTkn)
             if not possiblemoves:
                 break
             else:
                 condensedtranscript+="-1"
         if token == initialtoken:
-            if board.count(".")<MG_UPPER_LIMIT_AB and board.count(".")>MG_LOWER_LIMIT_AB:
-                nmmove = mgalphabeta(board, token, -64,64)[1][-1]
-                # nmmove = negamax(board, token)[1][-1]
-                if len(str(nmmove))>1:
-                    condensedtranscript+=str(nmmove)
-                else:
-                    condensedtranscript+=f"_{nmmove}"
-                board = makemove(board, nmmove, token, movedict)
-                token = eTkn
-            elif board.count(".")>=MG_UPPER_LIMIT_AB or (board.count(".")<=MG_LOWER_LIMIT_AB and board.count(".")>LIMIT_AB):
+            if board.count(".")>=LIMIT_AB:
                 move = quickMove(board, token)
                 # print("Quick Move:", move)
                 if len(str(move))>1:
@@ -329,14 +289,43 @@ def rungame(board, token):
                     condensedtranscript+=f"_{nmmove}"
                 board = makemove(board, nmmove, token, movedict)
                 token = eTkn
-        else: 
-            move = random.choice([*possiblemoves])
-            if len(str(move))>1:
-                condensedtranscript+=str(move)
+        else:
+            if desiredgame==0:
+                move = random.choice([*possiblemoves])
+                if len(str(move))>1:
+                    condensedtranscript+=str(move)
+                else:
+                    condensedtranscript+=f"_{move}"
+                board = makemove(board, move, token, movedict)
+                token = eTkn
+            elif desiredgame ==1:
+                move = quickMove(board, token)
+                # print("Quick Move:", move)
+                if len(str(move))>1:
+                    condensedtranscript+=str(move)
+                else:
+                    condensedtranscript+=f"_{move}"
+                board = makemove(board, move, token, movedict)
+                token = eTkn
             else:
-                condensedtranscript+=f"_{move}"
-            board = makemove(board, move, token, movedict)
-            token = eTkn
+                if board.count(".")>=LIMIT_AB:
+                    move = quickMove(board, token)
+                    # print("Quick Move:", move)
+                    if len(str(move))>1:
+                        condensedtranscript+=str(move)
+                    else:
+                        condensedtranscript+=f"_{move}"
+                    board = makemove(board, move, token, movedict)
+                    token = eTkn
+                else:
+                    nmmove = alphabeta(board, token, -64,64)[1][-1]
+                    # nmmove = negamax(board, token)[1][-1]
+                    if len(str(nmmove))>1:
+                        condensedtranscript+=str(nmmove)
+                    else:
+                        condensedtranscript+=f"_{nmmove}"
+                    board = makemove(board, nmmove, token, movedict)
+                    token = eTkn
     return condensedtranscript, board.count(initialtoken), board.count(opposingtoken)
 
 def negamax(board,tokentoplay):
@@ -348,7 +337,7 @@ def negamax(board,tokentoplay):
         eTkn = "O"
     else:
         eTkn = "X"
-    possiblemoves, movedict = findmoves(board, tokentoplay)
+    possiblemoves, movedict = findmoves(board, eTkn)
     if not possiblemoves:
         #Flips the Token
         tokentoplay = eTkn
@@ -356,7 +345,7 @@ def negamax(board,tokentoplay):
             eTkn = "O"
         else:
             eTkn = "X"
-        possiblemoves, movedict = findmoves(board, tokentoplay)
+        possiblemoves, movedict = findmoves(board, eTkn)
         if not possiblemoves:
             res=  (board.count(eTkn)-board.count(tokentoplay), [])
             cache[key] = (res[0], [*res[1]])
@@ -378,11 +367,11 @@ def negamax(board,tokentoplay):
 
 def alphabeta(board, tokentoplay, lower, upper):
     eTkn = "O" if tokentoplay == "X" else "X"
-    possiblemoves, movedict = findmoves(board, tokentoplay)
+    possiblemoves, movedict = findmoves(board, eTkn)
     if not possiblemoves:
         tokentoplay = eTkn
         eTkn = "O" if tokentoplay == "X" else "X"
-        possiblemoves, movedict = findmoves(board, tokentoplay)
+        possiblemoves, movedict = findmoves(board, eTkn)
         if not possiblemoves:
             return (board.count(eTkn)-board.count(tokentoplay), [])
         move = alphabeta(board, tokentoplay, -upper, -lower)
@@ -406,7 +395,7 @@ def quickMove(board, token):
     tokens = {*"XO"}
     token2 = (tokens- {token.upper()}).pop()
     board = board.upper()
-    possiblemoves, movedict = findmoves(board, token.upper())
+    possiblemoves, movedict = findmoves(board, token2.upper())
     possiblemoves = set(possiblemoves)
     # print("move:",possiblemoves)
     for move in possiblemoves:
@@ -438,15 +427,6 @@ def quickMove(board, token):
     for move in possiblemoves:
         if move in rowsstart or move in rowsend or move in colsstart or move in colsend:
             return move
-    # for move in possiblemoves:
-    #     b2 = makemove(board, move, token, movedict)
-    #     posmoves, movedict= findmoves(b2, token)
-
-    #     # posmoves = set(posmoves)-{1, 6, 8, 9, 14, 15, 48, 49, 57,54 ,55, 62}
-    #     if len(posmoves)<minmoves:
-    #         minmoves = len(posmoves)
-    #         minmove = move
-    # return minmove
     if possiblemoves:
         return possiblemoves.pop()
 
@@ -472,19 +452,19 @@ def main():
     if args:
         givenargs(args)
     else:
-        totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns()
-        print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
-        Score = (totalscore/totaltokens) *100
-        print("Score:", f"{Score:.1f}%")
-        print("NM/AB Limit:" , LIMIT_AB)
-        for gamescore in worstgames:
-            gamevals = gamevalues[gamescore]
-            gamenumber = gamevals[1]
-            transcript = gamevals[0]
-            token =  gamevals[2]
-            print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
-        print("Elapsed time:", f"{elapsed:.1f}s")
-    print(hitctr["movescache"])
+        for i in range(3):
+            totalscore, totaltokens, worstgames, gamevalues, elapsed = randomruns(i)
+            print("My tokens:", totalscore,"; Total tokens:" , totaltokens)
+            Score = (totalscore/totaltokens) *100
+            print("Score:", f"{Score:.1f}%")
+            print("NM/AB Limit:" , LIMIT_AB)
+            for gamescore in worstgames:
+                gamevals = gamevalues[gamescore]
+                gamenumber = gamevals[1]
+                transcript = gamevals[0]
+                token =  gamevals[2]
+                print("Game", gamenumber, "as", token, "=>", gamescore, "\n", transcript)
+            print("Elapsed time:", f"{elapsed:.1f}s")
 if __name__ == "__main__":
     main()
 
