@@ -1,7 +1,7 @@
 import sys;args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
 LIMIT_AB = 11
-MG_DEPTH = 4
+MG_DEPTH = 5
 import random, time
 
 def findsets():
@@ -526,6 +526,8 @@ def evaluation(board, token, eTkn):
 
 def mgalphabeta(board, tokentoplay, lower, upper, depth):
     eTkn = "O" if tokentoplay == "X" else "X"
+    if depth == 0:
+        return (evaluation(board, tokentoplay, eTkn), [])
     possiblemoves, movedict = findmoves(board, eTkn)
     if not possiblemoves:
         tokentoplay = eTkn
@@ -537,8 +539,6 @@ def mgalphabeta(board, tokentoplay, lower, upper, depth):
         move[1].append(-1)
         res = (-1*move[0], [*move[1]])
         return res
-    if depth == 0:
-        return (evaluation(board, tokentoplay, eTkn), [])
     best = (lower-1, [])
     for mv in possiblemoves:
         move = mgalphabeta(makemove(board,mv,tokentoplay, movedict), eTkn, -upper, -lower, depth-1)
@@ -552,6 +552,7 @@ def mgalphabeta(board, tokentoplay, lower, upper, depth):
 
 def main():
     # collectstats()
+    # args = ['19183711_3_417']
     if args:
         givenargs(args)
     else:
