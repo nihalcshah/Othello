@@ -1,7 +1,7 @@
 import sys;args = sys.argv[1:]
 #Nihal Shah, Period 6, 2023
-LIMIT_AB = 11
-MG_DEPTH = 4
+LIMIT_AB = 12
+MG_DEPTH = 2
 import random, time
 
 def findsets():
@@ -208,7 +208,7 @@ def givenargs(args):
     
     qm = quickMove(board, tokentoplay)
     print("My Preferred Move is", qm)
-    aboutput = mgalphabeta(board, tokentoplay, -100,100, MG_DEPTH)
+    aboutput = mgalphabeta(board, tokentoplay, -115,115, MG_DEPTH)
     print("Min score:", aboutput[0], "Move sequence:", aboutput[1])
     # if board.count(".")<LIMIT_AB:
     #     nmoutput = alphabeta(board, tokentoplay, -64,64)
@@ -285,7 +285,11 @@ def rungame(board, token, desiredgame):
         if token == initialtoken:
             if board.count(".")>=LIMIT_AB:
                 # move = quickMove(board, token)
-                aboutput = mgalphabeta(board, token, -100,100, MG_DEPTH)
+                tt = time.process_time()
+                aboutput = mgalphabeta(board, token, -115,115 , MG_DEPTH)
+                if time.process_time()-tt>0.5:
+                    print(condensedtranscript)
+                    exit()
                 try:
                     # move = mgalphabeta(board, token, -64,64, MG_DEPTH)[1][-1]
                     move = aboutput[1][-1]
@@ -468,7 +472,13 @@ def collectstats():
     print(scores)
 
 #calculate the number of stable edge and corner positions for each player
+global stablecache 
+stablecache = {}
 def metastable(board, token):
+    global stablecache
+    key = (board, token)
+    if key in stablecache:
+        return stablecache[key]
     stable = set()
     if board[0]==token:
         stable.add(0)
@@ -510,16 +520,17 @@ def metastable(board, token):
             if i in stable: break
             if board[i]==token: stable.add(i)
             else: break
+    stablecache[key] = len(stable)
     return len(stable)
 
 global evaluationcache
 evaluationcache = {}
-def evaluation(board, token, eTkn):
+def evaluation(board, token, eTkn, possiblemovestkn, etknpossiblemoves):
     global evaluationcache
     key = (board, token)
     if key in evaluationcache:
         return evaluationcache[key]
-    score = 10*(metastable(board, token)- metastable(board, eTkn))+(board.count(eTkn)-board.count(token))
+    score = 10*(metastable(board, token)- metastable(board, eTkn))+(board.count(eTkn)-board.count(token)) + (possiblemovestkn-etknpossiblemoves)
     evaluationcache[key] = score
     return score
     # return board.count(token)-board.count(eTkn)
@@ -532,13 +543,14 @@ def mgalphabeta(board, tokentoplay, lower, upper, depth):
         eTkn = "O" if tokentoplay == "X" else "X"
         possiblemoves2, movedict2 = findmoves(board, eTkn)
         if not possiblemoves2:
-            return (evaluation(board, tokentoplay, eTkn), [])
+            return (evaluation(board, tokentoplay, eTkn, len(possiblemoves2), len(possiblemoves)), [])
         move = mgalphabeta(board, tokentoplay, -upper, -lower, depth-1)
         move[1].append(-1)
         res = (-1*move[0], [*move[1]])
         return res
     if depth == 0:
-        return (evaluation(board, tokentoplay, eTkn), [])
+        possiblemoves2, movedict2 = findmoves(board, eTkn)
+        return (evaluation(board, tokentoplay, eTkn, len(possiblemoves), len(possiblemoves2)), [])
     best = (lower-1, [])
     for mv in possiblemoves:
         move = mgalphabeta(makemove(board,mv,tokentoplay, movedict), eTkn, -upper, -lower, depth-1)
@@ -552,6 +564,7 @@ def mgalphabeta(board, tokentoplay, lower, upper, depth):
 
 def main():
     # collectstats()
+    # args = ['192013422911_2_6103821_3_514_717_412']
     if args:
         givenargs(args)
     else:
